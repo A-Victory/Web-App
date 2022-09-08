@@ -1,22 +1,33 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/A-Victory/web/pkg/routes"
-	"github.com/gorilla/mux"
+	"github.com/julienschmidt/httprouter"
 )
 
 func main() {
-	r := mux.NewRouter()
+	r := httprouter.New()
+
 	routes.GhostWeb(r)
-	fs := http.FileServer(http.Dir("static"))
-	strp := http.StripPrefix(("/static/"), fs)
-	r.PathPrefix("/static/").Handler(strp)
-	http.Handle("/", r)
+	/*
+		fs := http.FileServer(http.Dir("static"))
+		strp := http.StripPrefix(("/static/"), fs)
+	*/
+	cert, _ := tls.LoadX509KeyPair("web.crt", "web.key")
+	r.ServeFiles("/static/*filepath", http.Dir("static"))
 	fmt.Println("server is starting")
-	log.Fatal(http.ListenAndServe(":80", r))
+	srv := &http.Server{
+		Addr:    ":9000",
+		Handler: r,
+
+		TLSConfig: &tls.Config{Certificates: []tls.Certificate{cert}},
+	}
+
+	log.Fatal(srv.ListenAndServeTLS("", ""))
 
 }
